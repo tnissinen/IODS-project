@@ -35,11 +35,13 @@ lrn14 <- filter(lrn14, Points > 0)
 # keep only some columns
 lrn14 <- select(lrn14, one_of(c("gender","Age","Attitude", "deep", "stra", "surf", "Points")))
 
+dim(lrn14)
+
 # set working directory
 setwd("C:/Users/tomni/Documents/IODS-project")
 
 # write to csv file
-write.csv(lrn14, "data/learning2014.csv")
+write.csv(lrn14, "data/learning2014.csv", row.names = FALSE)
 
 # read from csv file
 lrn14_from_file <- read.csv("data/learning2014.csv")
