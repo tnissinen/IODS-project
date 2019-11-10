@@ -1,52 +1,91 @@
 # Chapter 2: Regression and model validation
 
-*Describe the work you have done this week and summarize your learning.*
+Data creation R script:   
+https://github.com/tnissinen/IODS-project/blob/master/data/create_learning2014.R
 
-- Describe your work and results clearly. 
-- Assume the reader has an introductory course level understanding of writing and reading R code as well as statistical methods.
-- Assume the reader has no previous knowledge of your data or the more advanced methods you are using.
+### 1. Loading and checking the structure of the data
 
-1.
+```{r readdata,echo=TRUE,results='hide',message=FALSE,warning=FALSE}
+setwd("~/IODS-project")
+library(dplyr)
+
+lrn14 <- read.csv("~/IODS-project/data/learning2014.csv")
+
+```
+
+```{r datastructure}
+# structure of the data (all integers except gender that is "F"/"M")
+str(lrn14)
+```
+
 The dataset contains 166 observations with 7 variables (gender ("M" = male/"F" = female), age, attitude toward statistics, avg. of deep learning grades, avg. of strategic learning grades, avg. of surface learning grades and total points).
 
-2.
+### 2. Graphical overview of the dataset
 
-![Graphical overview of the dataset](1plot.png)
+```{r fig1, fig.path="figures/"}
+pairs(lrn14)
+```
 
+```{r fig2, fig.path="figures/", fig.dim=c(10,10), results='hide', message=FALSE}
+library(GGally)
+library(ggplot2)
+
+ggpairs(lrn14, mapping = aes(col = gender, alpha = 0.3), lower = list(combo = wrap("facethist", bins = 20)))
+```
+
+    
 From the graphical overview of the data I made following observations:
+
 - the distribution of age variable shows that there are more young people (close to their 20s) in the dataset 
-- the total points are quite evenly distributed over all ages, however the highest points are achieved by people below 40.
+- the total points are quite evenly distributed over all ages, however the highest points are achieved by people below 40
 - deep learning grades are higher than othe grades
 - attitude seems to correlate heavily with points
 
-3.
+```{r}
+qplot(Attitude, Points, data = lrn14) + geom_smooth(method = "lm")
+```
+
+### 3. Linear regression
 
 I chose Attitude, Age and Gender as explanatory variables:
 
-![Summary 1](summary1.png)
+```{r, results='asis'}
+# fit a linear model
+my_model <- lm(Points ~ Attitude + Age + gender, data = lrn14)
+
+# print out a summary of the model
+results <- summary(my_model)
+knitr::kable(results$coefficients, digits=3, caption="Regression coefficients")
+```
 
 Age and Gender doesn't seem to have statistically significant relationship with points, so I removed them.
 
-![Summary 2](summary2.png)
+```{r, results='asis'}
+# fit a linear model again with only Attitude
+my_model <- lm(Points ~ Attitude, data = lrn14)
 
-4.
+# summary of the model
+results <- summary(my_model)
+
+knitr::kable(results$coefficients, digits=3, caption="Regression coefficients")
+```
+
+### 4. Analysis of data and relationships
 
 Attitude has an effect of about 0.35 to the total points with a standard error of about 0.057. Since the Pr value is close to zero, we can conclude that the attitude has a statistically significant relationship with the points.
+
+Also Intercept is statistically significant in the model.
 
 The R-squared statistic provides a measure of how well the model is fitting the actual data. In multiple regression settings, the R2 will always increase as more variables are included in the model. That’s why the adjusted R2 is the preferred measure as it adjusts for the number of variables considered
 
 In this case the attitude has significant effect, but R squared value of 0.20 tells that it's clearly not the only factor. This can be also seen from the simple scatter plot of attitude vs. points.
 
-![Attitude vs. points](attitude_points.png)
 
+### 5. Diagnostic plots
 
-Using a summary of your fitted model, explain the relationship between the chosen explanatory variables and the target variable (interpret the model parameters). Explain and interpret the multiple R squared of the model. (0-3 points)
-
-5.
-
-Produce the following diagnostic plots: Residuals vs Fitted values, Normal QQ-plot and Residuals vs Leverage. Explain the assumptions of the model and interpret the validity of those assumptions based on the diagnostic plots. (0-3 points)
-
-![Graphical overview of the dataset](3plots.png)
+```{r fig3, fig.path="figures/"}
+plot(my_model, which=c(1,2,5))
+```
 
 We assume that the error in our model is normally distributed. The Q-Q plot shows that the normality assumption seems to hold reasonably well.
 
