@@ -1,0 +1,161 @@
+# Chapter 3: Logistic regression
+
+Data creation R script:   
+https://github.com/tnissinen/IODS-project/blob/master/data/create_alc.R
+
+### Loading and checking the structure of the data
+
+```{r readdata_alc,echo=TRUE,results='hide',message=FALSE,warning=FALSE}
+setwd("~/IODS-project")
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+alc <- read.csv("~/IODS-project/data/alc.csv")
+
+```
+
+```{r datastructure_alc}
+# structure of the data (all integers except gender that is "F"/"M")
+colnames(alc)
+
+glimpse(alc)
+```
+
+The dataset contains 382 observations with 35 variables
+
+4 interesting variables:
+activities - extra-curricular activities (binary: yes or no)
+romantic - with a romantic relationship (binary: yes or no)
+failures - number of past class failures (numeric: n if 1<=n<3, else 4)
+studytime - weekly study time (numeric: 1 - <2 hours, 2 - 2 to 5 hours, 3 - 5 to 10 hours, or 4 - >10 hours)
+
+My hypothesis
+activities, romantic relationship and higher studytime will correlate negatively with alcohol consumption. Failures will probably correlate positively with alcohol consumption.
+
+
+### Distributions and relatioships of the selected variables
+
+Distributions 
+
+```{r fig_alc2, fig.path="figures/", fig.dim=c(10,10), results='hide', message=FALSE, warning=FALSE}
+
+
+alc_selected <- select(alc, one_of(c("activities", "romantic", "failures", "studytime")))
+gather(alc_selected) %>% ggplot(aes(value)) + facet_wrap("key", scales = "free") + geom_bar()
+```
+
+Relationships with high alcohol usage
+
+
+Activities
+```{r}
+
+g1 <- ggplot(data = alc, aes(x = alc_use, fill = activities))
+g1 + geom_bar()
+
+```
+
+Romantic
+```{r}
+
+g1 <- ggplot(data = alc, aes(x = alc_use, fill = romantic))
+g1 + geom_bar()
+
+```
+
+Failures
+```{r}
+
+qplot(alc_use, failures, data = alc) + geom_smooth(method = "lm")
+
+```
+
+Studytime
+```{r}
+
+qplot(alc_use, studytime, data = alc) + geom_smooth(method = "lm")
+
+```
+
+
+### Logistic regression for exploring the relationships
+
+Summary of my explanatory variables coefficients:
+
+```{r, results='asis'}
+
+# find the model with glm()
+m <- glm(high_use ~ failures + activities + studytime + romantic + failures, data = alc, family = "binomial")
+
+# print out a summary of the model
+results <- summary(m)
+
+# print out a summary of the model
+knitr::kable(results$coefficients, digits=3, caption="Coefficients")
+
+```
+
+We can see that my original hypothesis was correct. Although, only failures and studytime are statistically significant factors (p<0.05).
+
+
+Odds ratios:
+
+```{r, results='asis', message=FALSE}
+
+# compute odds ratios (OR)
+OR <- coef(m) %>% exp
+
+# compute confidence intervals (CI)
+CI <- confint(m) %>% exp
+
+# print out the odds ratios with their confidence intervals
+results <- cbind(OR, CI)
+
+# print
+knitr::kable(results, digits=3, caption="Odds ratios")
+
+```
+
+
+### Analysis of the predictive power of the model
+
+```{r, results='asis'}
+
+# predict() the probability of high_use
+probabilities <- predict(m, type = "response")
+
+# add the predicted probabilities to 'alc'
+alc <- mutate(alc, probability = probabilities)
+
+# use the probabilities to make a prediction of high_use
+alc <- mutate(alc, prediction = probability > 0.5)
+
+# tabulate the target variable versus the predictions
+results <- table(high_use = alc$high_use, prediction = alc$prediction)
+
+knitr::kable(results, digits=3, caption="Tabulate the target variable versus the predictions")
+```
+
+```{r fig_alc3, fig.path="figures/"}
+
+g <- ggplot(alc, aes(x = probability, y = high_use, col = prediction))
+
+# define the geom as points and draw the plot
+g + geom_point()
+# tabulate the target variable versus the predictions
+tab <- table(high_use = alc$high_use, prediction = alc$prediction) %>% prop.table() %>% addmargins()
+
+
+knitr::kable(tab, digits=3, caption="Tabulate the target variable versus the predictions (proportions)")
+```
+
+Total proportion of inaccurately classified individuals:
+```{r}
+
+v <- as.vector(table(high_use = alc$high_use, prediction = alc$prediction))
+v2 <- (v[2]+v[3])/(v[1]+v[2]+v[3]+v[4])
+v2
+
+```
+
+...
