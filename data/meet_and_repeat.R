@@ -50,7 +50,6 @@ glimpse(BPRSL)
 
 
 # Factor variables ID and Group
-# Factor treatment & subject
 RATS$ID <- factor(RATS$ID)
 RATS$Group <- factor(RATS$Group)
 
